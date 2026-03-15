@@ -532,7 +532,12 @@
 
     function importTasks() {
       const bulk = document.getElementById('bulk-input');
+      const generalSection = state.sections.find(s => s.name === 'General' && s.id !== COMPLETED_ID);
+      const targetId = generalSection ? generalSection.id : state.sections.find(s => s.id !== COMPLETED_ID)?.id;
+      const prevSelected = sectionSelect.value;
+      sectionSelect.value = targetId;
       bulk.value.split('\n').map(l => l.trim()).filter(l => l).forEach(line => addTask(line));
+      sectionSelect.value = prevSelected;
       bulk.value = '';
     }
 
