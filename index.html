@@ -194,21 +194,45 @@
   <div id="sections-container"></div>
   <button id="add-section-btn" onclick="addSection()">+ Add Section</button>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getFirestore, doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCKCWEfFbKd_dv-HoerMflscdDam1hV2gk",
+      authDomain: "todo-list-17c1d.firebaseapp.com",
+      projectId: "todo-list-17c1d",
+      storageBucket: "todo-list-17c1d.firebasestorage.app",
+      messagingSenderId: "467324541020",
+      appId: "1:467324541020:web:8e586f4b21f62d76d96e99"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const stateRef = doc(db, 'todo', 'state');
+
     const taskInput = document.getElementById('task-input');
     const sectionSelect = document.getElementById('section-select');
     const container = document.getElementById('sections-container');
 
+    // Expose functions used in onclick attributes
+    window.addTask = addTask;
+    window.addSection = addSection;
+    window.importTasks = importTasks;
+
     const COMPLETED_ID = '__completed__';
     let state = { sections: [], tasks: [] };
     let draggedTaskId = null;
+    let isSaving = false;
 
     function uid() {
       return Date.now().toString(36) + Math.random().toString(36).slice(2);
     }
 
-    function save() {
-      localStorage.setItem('todo-state', JSON.stringify(state));
+    async function save() {
+      isSaving = true;
+      await setDoc(stateRef, state);
+      isSaving = false;
     }
 
     function ensureCompletedSection() {
@@ -217,21 +241,23 @@
         completed = { id: COMPLETED_ID, name: 'Completed', collapsed: true };
         state.sections.push(completed);
       }
-      // Always keep Completed last
       state.sections = [...state.sections.filter(s => s.id !== COMPLETED_ID), completed];
     }
 
     function load() {
-      const raw = localStorage.getItem('todo-state');
-      if (raw) {
-        state = JSON.parse(raw);
-      } else {
-        state.sections = [{ id: uid(), name: 'General', collapsed: false }];
-        state.tasks = [];
-      }
-      ensureCompletedSection();
-      save();
-      render();
+      onSnapshot(stateRef, (snap) => {
+        if (isSaving) return;
+        if (snap.exists()) {
+          state = snap.data();
+        } else {
+          state = {
+            sections: [{ id: uid(), name: 'General', collapsed: false }],
+            tasks: []
+          };
+        }
+        ensureCompletedSection();
+        render();
+      });
     }
 
     function render() {
