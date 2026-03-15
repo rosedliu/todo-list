@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To-Do List</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 560px;
+      margin: 60px auto;
+      padding: 0 20px;
+    }
+    h1 { text-align: center; }
+    #input-area {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    #task-input {
+      flex: 1;
+      padding: 8px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    #section-select {
+      padding: 8px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 8px 16px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      background-color: #4a90e2;
+      color: white;
+    }
+    button:hover { background-color: #357abd; }
+
+    #import-section { margin-bottom: 24px; }
+    #import-section details summary {
+      cursor: pointer;
+      color: #4a90e2;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    #bulk-input {
+      width: 100%;
+      height: 100px;
+      padding: 8px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+      resize: vertical;
+    }
+    #import-btn { margin-top: 8px; font-size: 14px; padding: 6px 14px; }
+
+    .section {
+      margin-bottom: 16px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      background: #f5f5f5;
+      padding: 8px 12px;
+      gap: 8px;
+    }
+    .section-toggle {
+      cursor: pointer;
+      font-size: 12px;
+      color: #666;
+      user-select: none;
+      width: 16px;
+    }
+    .section-name {
+      flex: 1;
+      font-weight: bold;
+      font-size: 15px;
+    }
+    .section-name-input {
+      flex: 1;
+      font-size: 15px;
+      font-weight: bold;
+      padding: 2px 6px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .rename-btn {
+      background: none;
+      color: #4a90e2;
+      font-size: 13px;
+      padding: 3px 8px;
+    }
+    .rename-btn:hover { background: #e8f0fb; }
+    .delete-section-btn {
+      background: none;
+      color: #e24a4a;
+      font-size: 13px;
+      padding: 3px 8px;
+    }
+    .delete-section-btn:hover { background: #fdecea; }
+    .section-body { padding: 0; min-height: 10px; }
+    .section-body.collapsed { display: none; }
+    .section-body.drop-target { background: #f0f6ff; }
+
+    ul { list-style: none; padding: 0; margin: 0; }
+    li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+      cursor: grab;
+    }
+    li:last-child { border-bottom: none; }
+    li.dragging { opacity: 0.4; }
+    li.drag-over { border-top: 2px solid #4a90e2; }
+    li.done .task-text { text-decoration: line-through; color: #aaa; }
+
+    .drag-handle {
+      color: #ccc;
+      margin-right: 10px;
+      cursor: grab;
+      font-size: 18px;
+      user-select: none;
+    }
+    .task-text { flex: 1; cursor: pointer; }
+    .btn-group { display: flex; align-items: center; }
+    .edit-btn {
+      background-color: #f0a500;
+      padding: 4px 10px;
+      font-size: 14px;
+      margin-right: 6px;
+    }
+    .edit-btn:hover { background-color: #c98600; }
+    .edit-input {
+      flex: 1;
+      padding: 4px 8px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-right: 6px;
+    }
+    .save-btn {
+      background-color: #4caf50;
+      padding: 4px 10px;
+      font-size: 14px;
+      margin-right: 6px;
+    }
+    .save-btn:hover { background-color: #388e3c; }
+    .delete-btn {
+      background-color: #e24a4a;
+      padding: 4px 10px;
+      font-size: 14px;
+    }
+    .delete-btn:hover { background-color: #bd3535; }
+
+    #add-section-btn {
+      display: block;
+      width: 100%;
+      background: none;
+      color: #4a90e2;
+      border: 1px dashed #4a90e2;
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+    #add-section-btn:hover { background: #f0f6ff; }
+  </style>
+</head>
+<body>
+  <h1>To-Do List</h1>
+  <div id="input-area">
+    <input type="text" id="task-input" placeholder="Add a new task..." />
+    <select id="section-select"></select>
+    <button onclick="addTask()">Add</button>
+  </div>
+  <div id="import-section">
+    <details>
+      <summary>Import tasks from Google Doc (paste text)</summary>
+      <textarea id="bulk-input" placeholder="Paste lines from your Google Doc — one task per line"></textarea>
+      <button id="import-btn" onclick="importTasks()">Import</button>
+    </details>
+  </div>
+  <div id="sections-container"></div>
+  <button id="add-section-btn" onclick="addSection()">+ Add Section</button>
+
+  <script>
+    const taskInput = document.getElementById('task-input');
+    const sectionSelect = document.getElementById('section-select');
+    const container = document.getElementById('sections-container');
+
+    const COMPLETED_ID = '__completed__';
+    let state = { sections: [], tasks: [] };
+    let draggedTaskId = null;
+
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2);
+    }
+
+    function save() {
+      localStorage.setItem('todo-state', JSON.stringify(state));
+    }
+
+    function ensureCompletedSection() {
+      let completed = state.sections.find(s => s.id === COMPLETED_ID);
+      if (!completed) {
+        completed = { id: COMPLETED_ID, name: 'Completed', collapsed: true };
+        state.sections.push(completed);
+      }
+      // Always keep Completed last
+      state.sections = [...state.sections.filter(s => s.id !== COMPLETED_ID), completed];
+    }
+
+    function load() {
+      const raw = localStorage.getItem('todo-state');
+      if (raw) {
+        state = JSON.parse(raw);
+      } else {
+        state.sections = [{ id: uid(), name: 'General', collapsed: false }];
+        state.tasks = [];
+      }
+      ensureCompletedSection();
+      save();
+      render();
+    }
+
+    function render() {
+      container.innerHTML = '';
+      state.sections.forEach(sec => renderSection(sec));
+      refreshSectionSelect();
+    }
+
+    function renderSection(sec) {
+      const section = document.createElement('div');
+      section.className = 'section';
+      section.dataset.id = sec.id;
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'section-header';
+
+      const toggle = document.createElement('span');
+      toggle.className = 'section-toggle';
+      toggle.textContent = sec.collapsed ? '▸' : '▾';
+      toggle.onclick = () => {
+        sec.collapsed = !sec.collapsed;
+        save();
+        toggle.textContent = sec.collapsed ? '▸' : '▾';
+        body.classList.toggle('collapsed', sec.collapsed);
+      };
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'section-name';
+      nameEl.textContent = sec.name;
+
+      const renameBtn = document.createElement('button');
+      renameBtn.textContent = 'Rename';
+      renameBtn.className = 'rename-btn';
+      renameBtn.onclick = () => {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'section-name-input';
+        input.value = sec.name;
+        const doSave = () => {
+          const val = input.value.trim();
+          if (val) sec.name = val;
+          save();
+          nameEl.textContent = sec.name;
+          input.replaceWith(nameEl);
+          renameBtn.textContent = 'Rename';
+          refreshSectionSelect();
+        };
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') doSave();
+          if (e.key === 'Escape') { input.replaceWith(nameEl); renameBtn.textContent = 'Rename'; }
+        });
+        renameBtn.textContent = 'Save';
+        renameBtn.onclick = doSave;
+        nameEl.replaceWith(input);
+        input.focus();
+      };
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.className = 'delete-section-btn';
+      deleteBtn.onclick = () => {
+        if (state.sections.length === 1) { alert('You need at least one section.'); return; }
+        state.sections = state.sections.filter(s => s.id !== sec.id);
+        state.tasks = state.tasks.filter(t => t.sectionId !== sec.id);
+        save();
+        render();
+      };
+
+      header.appendChild(toggle);
+      header.appendChild(nameEl);
+      if (sec.id !== COMPLETED_ID) {
+        header.appendChild(renameBtn);
+        header.appendChild(deleteBtn);
+      }
+
+      // Body
+      const body = document.createElement('div');
+      body.className = 'section-body' + (sec.collapsed ? ' collapsed' : '');
+
+      const ul = document.createElement('ul');
+      ul.dataset.sectionId = sec.id;
+
+      state.tasks.filter(t => t.sectionId === sec.id).forEach(task => {
+        ul.appendChild(renderTask(task));
+      });
+
+      // Drop onto empty section
+      body.addEventListener('dragover', e => { e.preventDefault(); body.classList.add('drop-target'); });
+      body.addEventListener('dragleave', () => body.classList.remove('drop-target'));
+      body.addEventListener('drop', e => {
+        e.preventDefault();
+        body.classList.remove('drop-target');
+        if (draggedTaskId) {
+          const task = state.tasks.find(t => t.id === draggedTaskId);
+          if (task && task.sectionId !== sec.id) {
+            task.sectionId = sec.id;
+            save();
+            render();
+          }
+        }
+      });
+
+      body.appendChild(ul);
+      section.appendChild(header);
+      section.appendChild(body);
+      container.appendChild(section);
+    }
+
+    function renderTask(task) {
+      const li = document.createElement('li');
+      li.dataset.id = task.id;
+      li.draggable = true;
+      if (task.done) li.classList.add('done');
+
+      const handle = document.createElement('span');
+      handle.className = 'drag-handle';
+      handle.textContent = '⠿';
+
+      li.addEventListener('dragstart', () => {
+        draggedTaskId = task.id;
+        setTimeout(() => li.classList.add('dragging'), 0);
+      });
+      li.addEventListener('dragend', () => {
+        draggedTaskId = null;
+        li.classList.remove('dragging');
+        document.querySelectorAll('li').forEach(i => i.classList.remove('drag-over'));
+        document.querySelectorAll('.section-body').forEach(b => b.classList.remove('drop-target'));
+      });
+      li.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        document.querySelectorAll('li').forEach(i => i.classList.remove('drag-over'));
+        li.classList.add('drag-over');
+      });
+      li.addEventListener('drop', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        li.classList.remove('drag-over');
+        if (!draggedTaskId || draggedTaskId === task.id) return;
+        const fromIndex = state.tasks.findIndex(t => t.id === draggedTaskId);
+        const toIndex = state.tasks.findIndex(t => t.id === task.id);
+        const [moved] = state.tasks.splice(fromIndex, 1);
+        moved.sectionId = task.sectionId;
+        state.tasks.splice(toIndex, 0, moved);
+        save();
+        render();
+      });
+
+      const span = document.createElement('span');
+      span.className = 'task-text';
+      span.textContent = task.text;
+      span.onclick = () => {
+        if (task.sectionId === COMPLETED_ID) {
+          // Restore task
+          task.done = false;
+          const dest = task.originalSectionId &&
+            state.sections.find(s => s.id === task.originalSectionId && s.id !== COMPLETED_ID)
+              ? task.originalSectionId
+              : state.sections.find(s => s.id !== COMPLETED_ID)?.id;
+          task.sectionId = dest;
+          delete task.originalSectionId;
+        } else {
+          // Complete task
+          task.done = true;
+          task.originalSectionId = task.sectionId;
+          task.sectionId = COMPLETED_ID;
+        }
+        save();
+        render();
+      };
+
+      const btnGroup = document.createElement('div');
+      btnGroup.className = 'btn-group';
+
+      const edit = document.createElement('button');
+      edit.textContent = 'Edit';
+      edit.className = 'edit-btn';
+      edit.onclick = () => {
+        const editInput = document.createElement('input');
+        editInput.type = 'text';
+        editInput.className = 'edit-input';
+        editInput.value = task.text;
+
+        const save2 = document.createElement('button');
+        save2.textContent = 'Save';
+        save2.className = 'save-btn';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.className = 'edit-btn';
+        cancelBtn.style.marginRight = '6px';
+
+        const doSave = () => {
+          const val = editInput.value.trim();
+          if (val) { task.text = val; span.textContent = val; }
+          save();
+          li.replaceChild(span, editInput);
+          btnGroup.replaceChild(edit, save2);
+          btnGroup.removeChild(cancelBtn);
+        };
+        cancelBtn.onclick = () => {
+          li.replaceChild(span, editInput);
+          btnGroup.replaceChild(edit, save2);
+          btnGroup.removeChild(cancelBtn);
+        };
+        save2.onclick = doSave;
+        editInput.addEventListener('keydown', e => {
+          if (e.key === 'Enter') doSave();
+          if (e.key === 'Escape') cancelBtn.onclick();
+        });
+        li.replaceChild(editInput, span);
+        btnGroup.replaceChild(save2, edit);
+        btnGroup.insertBefore(cancelBtn, del);
+        editInput.focus();
+      };
+
+      const del = document.createElement('button');
+      del.textContent = 'Delete';
+      del.className = 'delete-btn';
+      del.onclick = () => {
+        state.tasks = state.tasks.filter(t => t.id !== task.id);
+        save();
+        li.remove();
+      };
+
+      btnGroup.appendChild(edit);
+      btnGroup.appendChild(del);
+      li.appendChild(handle);
+      li.appendChild(span);
+      li.appendChild(btnGroup);
+      return li;
+    }
+
+    function refreshSectionSelect() {
+      const current = sectionSelect.value;
+      sectionSelect.innerHTML = '';
+      state.sections.filter(s => s.id !== COMPLETED_ID).forEach(sec => {
+        const opt = document.createElement('option');
+        opt.value = sec.id;
+        opt.textContent = sec.name;
+        sectionSelect.appendChild(opt);
+      });
+      if (current && state.sections.find(s => s.id === current)) {
+        sectionSelect.value = current;
+      }
+    }
+
+    function addSection(name = 'New Section') {
+      const sec = { id: uid(), name, collapsed: false };
+      // Insert before Completed
+      const completedIdx = state.sections.findIndex(s => s.id === COMPLETED_ID);
+      state.sections.splice(completedIdx, 0, sec);
+      save();
+      render();
+      sectionSelect.value = sec.id;
+    }
+
+    function addTask(text) {
+      text = text ?? taskInput.value.trim();
+      if (!text) return;
+      const sectionId = sectionSelect.value;
+      if (!sectionId) return;
+      const task = { id: uid(), sectionId, text, done: false };
+      state.tasks.push(task);
+      save();
+      const ul = document.querySelector(`ul[data-section-id="${sectionId}"]`);
+      if (ul) ul.appendChild(renderTask(task));
+      taskInput.value = '';
+      taskInput.focus();
+    }
+
+    function importTasks() {
+      const bulk = document.getElementById('bulk-input');
+      bulk.value.split('\n').map(l => l.trim()).filter(l => l).forEach(line => addTask(line));
+      bulk.value = '';
+    }
+
+    taskInput.addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+
+    load();
+  </script>
+</body>
+</html>
