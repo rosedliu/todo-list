@@ -523,10 +523,12 @@
       const sectionId = sectionSelect.value;
       if (!sectionId) return;
       const task = { id: uid(), sectionId, text, done: false };
-      state.tasks.push(task);
+      const firstInSection = state.tasks.findIndex(t => t.sectionId === sectionId);
+      if (firstInSection === -1) state.tasks.push(task);
+      else state.tasks.splice(firstInSection, 0, task);
       save();
       const ul = document.querySelector(`ul[data-section-id="${sectionId}"]`);
-      if (ul) ul.appendChild(renderTask(task));
+      if (ul) ul.insertBefore(renderTask(task), ul.firstChild);
       taskInput.value = '';
       taskInput.focus();
     }
