@@ -178,10 +178,19 @@
       margin-top: 8px;
     }
     #add-section-btn:hover { background: #f0f6ff; }
+    #undo-btn {
+      display: none;
+      margin: 0 auto 16px;
+      background-color: #888;
+      font-size: 14px;
+      padding: 6px 16px;
+    }
+    #undo-btn:hover { background-color: #666; }
   </style>
 </head>
 <body>
   <h1>To-Do List</h1>
+  <button id="undo-btn" onclick="undo()">↩ Undo</button>
   <div id="input-area">
     <input type="text" id="task-input" placeholder="Add a new task..." />
     <select id="section-select"></select>
@@ -227,6 +236,23 @@
     let state = { sections: [], tasks: [] };
     let draggedTaskId = null;
     let isSaving = false;
+    let previousState = null;
+
+    function snapshot() {
+      previousState = JSON.parse(JSON.stringify(state));
+      document.getElementById('undo-btn').style.display = 'block';
+    }
+
+    function undo() {
+      if (!previousState) return;
+      state = previousState;
+      previousState = null;
+      document.getElementById('undo-btn').style.display = 'none';
+      save();
+      render();
+    }
+
+    window.undo = undo;
 
     function uid() {
       return Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -414,6 +440,7 @@
       span.className = 'task-text';
       span.textContent = task.text;
       span.onclick = () => {
+        snapshot();
         if (task.sectionId === COMPLETED_ID) {
           // Restore task
           task.done = false;
