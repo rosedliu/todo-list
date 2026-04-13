@@ -485,8 +485,10 @@
       handle.className = 'drag-handle';
       handle.textContent = '⠿';
 
-      li.addEventListener('dragstart', () => {
+      li.addEventListener('dragstart', e => {
         draggedTaskId = task.id;
+        draggedSectionId = null;
+        e.stopPropagation();
         setTimeout(() => li.classList.add('dragging'), 0);
       });
       li.addEventListener('dragend', () => {
