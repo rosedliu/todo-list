@@ -315,13 +315,12 @@
       section.dataset.id = sec.id;
 
       if (sec.id !== COMPLETED_ID) {
-        section.draggable = true;
         section.addEventListener('dragstart', e => {
-          draggedSectionId = sec.id;
-          draggedTaskId = null;
+          if (!draggedSectionId) return; // only proceed if handle initiated this
           setTimeout(() => section.classList.add('dragging'), 0);
         });
         section.addEventListener('dragend', () => {
+          section.draggable = false;
           draggedSectionId = null;
           section.classList.remove('dragging');
           document.querySelectorAll('.section').forEach(s => s.classList.remove('drag-over'));
@@ -411,6 +410,13 @@
         const sectionHandle = document.createElement('span');
         sectionHandle.className = 'section-drag-handle';
         sectionHandle.textContent = '⋮⋮';
+        sectionHandle.addEventListener('mousedown', () => {
+          section.draggable = true;
+          draggedSectionId = sec.id;
+        });
+        sectionHandle.addEventListener('mouseup', () => {
+          section.draggable = false;
+        });
         header.appendChild(sectionHandle);
       }
       header.appendChild(toggle);
@@ -487,8 +493,6 @@
 
       li.addEventListener('dragstart', e => {
         draggedTaskId = task.id;
-        draggedSectionId = null;
-        e.stopPropagation();
         setTimeout(() => li.classList.add('dragging'), 0);
       });
       li.addEventListener('dragend', () => {
