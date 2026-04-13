@@ -74,6 +74,18 @@
       padding: 8px 12px;
       gap: 8px;
     }
+    .section-drag-handle {
+      color: #666;
+      cursor: grab;
+      font-size: 14px;
+      letter-spacing: -2px;
+      user-select: none;
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+    .section-drag-handle:hover { color: #222; }
+    .section.dragging { opacity: 0.4; }
+    .section.drag-over { border-top: 2px solid #4a90e2; }
     .section-toggle {
       cursor: pointer;
       font-size: 12px;
@@ -235,6 +247,7 @@
     const COMPLETED_ID = '__completed__';
     let state = { sections: [], tasks: [] };
     let draggedTaskId = null;
+    let draggedSectionId = null;
     let isSaving = false;
     let previousState = null;
 
@@ -300,6 +313,43 @@
       section.className = 'section';
       section.dataset.id = sec.id;
 
+      if (sec.id !== COMPLETED_ID) {
+        section.draggable = true;
+        section.addEventListener('dragstart', e => {
+          draggedSectionId = sec.id;
+          draggedTaskId = null;
+          setTimeout(() => section.classList.add('dragging'), 0);
+        });
+        section.addEventListener('dragend', () => {
+          draggedSectionId = null;
+          section.classList.remove('dragging');
+          document.querySelectorAll('.section').forEach(s => s.classList.remove('drag-over'));
+        });
+        section.addEventListener('dragover', e => {
+          if (!draggedSectionId || draggedSectionId === sec.id) return;
+          e.preventDefault();
+          e.stopPropagation();
+          document.querySelectorAll('.section').forEach(s => s.classList.remove('drag-over'));
+          section.classList.add('drag-over');
+        });
+        section.addEventListener('dragleave', e => {
+          if (!section.contains(e.relatedTarget)) section.classList.remove('drag-over');
+        });
+        section.addEventListener('drop', e => {
+          if (!draggedSectionId || draggedSectionId === sec.id) return;
+          e.preventDefault();
+          e.stopPropagation();
+          section.classList.remove('drag-over');
+          const fromIdx = state.sections.findIndex(s => s.id === draggedSectionId);
+          const toIdx = state.sections.findIndex(s => s.id === sec.id);
+          const [moved] = state.sections.splice(fromIdx, 1);
+          state.sections.splice(toIdx, 0, moved);
+          ensureCompletedSection();
+          save();
+          render();
+        });
+      }
+
       // Header
       const header = document.createElement('div');
       header.className = 'section-header';
@@ -356,6 +406,12 @@
         render();
       };
 
+      if (sec.id !== COMPLETED_ID) {
+        const sectionHandle = document.createElement('span');
+        sectionHandle.className = 'section-drag-handle';
+        sectionHandle.textContent = '⋮⋮';
+        header.appendChild(sectionHandle);
+      }
       header.appendChild(toggle);
       header.appendChild(nameEl);
       if (sec.id !== COMPLETED_ID) {
@@ -375,11 +431,12 @@
       });
 
       // Drop onto empty section
-      body.addEventListener('dragover', e => { e.preventDefault(); body.classList.add('drop-target'); });
+      body.addEventListener('dragover', e => { if (draggedSectionId) return; e.preventDefault(); body.classList.add('drop-target'); });
       body.addEventListener('dragleave', () => body.classList.remove('drop-target'));
       body.addEventListener('drop', e => {
         e.preventDefault();
         body.classList.remove('drop-target');
+        if (draggedSectionId) return;
         if (draggedTaskId) {
           const task = state.tasks.find(t => t.id === draggedTaskId);
           if (task && task.sectionId !== sec.id) {
