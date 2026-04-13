@@ -123,6 +123,7 @@
     .section-body { padding: 0; min-height: 10px; }
     .section-body.collapsed { display: none; }
     .section-body.drop-target { background: #f0f6ff; }
+    .section-header.drop-target { background: #dceeff; }
 
     ul { list-style: none; padding: 0; margin: 0; }
     li {
@@ -418,6 +419,27 @@
         header.appendChild(renameBtn);
         header.appendChild(deleteBtn);
       }
+
+      // Accept task drops on the header
+      header.addEventListener('dragover', e => {
+        if (!draggedTaskId) return;
+        e.preventDefault();
+        e.stopPropagation();
+        header.classList.add('drop-target');
+      });
+      header.addEventListener('dragleave', () => header.classList.remove('drop-target'));
+      header.addEventListener('drop', e => {
+        if (!draggedTaskId) return;
+        e.preventDefault();
+        e.stopPropagation();
+        header.classList.remove('drop-target');
+        const task = state.tasks.find(t => t.id === draggedTaskId);
+        if (task && task.sectionId !== sec.id) {
+          task.sectionId = sec.id;
+          save();
+          render();
+        }
+      });
 
       // Body
       const body = document.createElement('div');
