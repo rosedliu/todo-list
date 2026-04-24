@@ -132,7 +132,6 @@
       justify-content: space-between;
       padding: 10px 12px;
       border-bottom: 1px solid #eee;
-      cursor: grab;
     }
     li:last-child { border-bottom: none; }
     li.dragging { opacity: 0.4; }
@@ -493,18 +492,20 @@
     function renderTask(task) {
       const li = document.createElement('li');
       li.dataset.id = task.id;
-      li.draggable = true;
       if (task.done) li.classList.add('done');
 
       const handle = document.createElement('span');
       handle.className = 'drag-handle';
       handle.textContent = '⠿';
+      handle.addEventListener('mousedown', () => { li.draggable = true; });
+      handle.addEventListener('mouseup', () => { li.draggable = false; });
 
       li.addEventListener('dragstart', e => {
         draggedTaskId = task.id;
         setTimeout(() => li.classList.add('dragging'), 0);
       });
       li.addEventListener('dragend', () => {
+        li.draggable = false;
         draggedTaskId = null;
         li.classList.remove('dragging');
         document.querySelectorAll('li').forEach(i => i.classList.remove('drag-over'));
